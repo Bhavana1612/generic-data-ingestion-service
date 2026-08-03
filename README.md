@@ -1,37 +1,50 @@
-# Generic Data Ingestion Service
+\# Generic Data Ingestion Service
 
-A FastAPI based data ingestion and storage service.
 
-## Tech Stack
-- FastAPI
-- PostgreSQL
-- SQLAlchemy
-- Docker
-- Swagger OpenAPI
 
-## Run Project
+A FastAPI-based API service for ingesting and storing data.
+
+
+
+\## Tech Stack
+
+
+
+\- FastAPI
+
+\- PostgreSQL
+
+\- SQLAlchemy
+
+\- Docker
+
+\- Swagger OpenAPI
+
+
+
+\## Features
+
+
+
+\- JSON data ingestion API
+
+\- PostgreSQL data storage
+
+\- REST API documentation using Swagger
+
+\- Dockerized PostgreSQL database
+
+
+
+\## Setup
+
+
 
 Start PostgreSQL:
 
+
+
+```bash
+
 docker compose up -d
 
-Activate environment:
-
-.\venv\Scripts\Activate.ps1
-
-Run API:
-
-uvicorn app.main:app --reload
-
-Swagger:
-
-http://127.0.0.1:8000/docs
-
-## APIs
-
-POST /ingest/
-- Accepts JSON data
-- Stores ingestion records
-
-GET /ingest/
-- Fetches ingested data
