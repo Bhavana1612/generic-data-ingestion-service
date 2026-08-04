@@ -439,3 +439,14 @@ Run:
 git status
 
 Then send me the output. We will commit and push the README.
+## AI Usage
+
+AI tools were used during development for:
+- Designing the ingestion service architecture
+- Debugging FastAPI, SQLAlchemy, Docker, and deployment issues
+- Improving documentation
+
+One example:
+During development, AI suggested an initial approach that did not fully match the production deployment requirements. I verified the behavior by testing locally and on Render, then corrected the implementation using environment-based configuration.
+
+All AI-generated suggestions were reviewed, tested, and modified before integration.
