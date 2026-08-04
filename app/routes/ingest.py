@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import IngestedData
-from app.schemas import EndpointRequest
+from app.schemas import IngestionRequest
 from app.services.ingestion_service import ingest_external_data
 
 
@@ -15,12 +15,12 @@ router = APIRouter(
 
 @router.post("/")
 def ingest_data(
-    request: EndpointRequest,
+    request: IngestionRequest,
     db: Session = Depends(get_db)
 ):
 
     saved_records = ingest_external_data(
-        request.endpoints,
+        request.sources,
         db
     )
 

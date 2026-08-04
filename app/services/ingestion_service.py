@@ -5,15 +5,19 @@ from sqlalchemy.orm import Session
 from app.models import IngestedData
 
 
-def ingest_external_data(endpoints, db: Session):
+def ingest_external_data(sources, db: Session):
 
     saved_records = []
 
-    for endpoint in endpoints:
+    for source in sources:
+
+        endpoint = source.url
+        headers = source.headers
 
         try:
             response = requests.get(
                 endpoint,
+                headers=headers,
                 timeout=10
             )
 
@@ -33,7 +37,7 @@ def ingest_external_data(endpoints, db: Session):
                 detail=f"API returned an error for {endpoint}"
             )
 
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
             raise HTTPException(
                 status_code=400,
                 detail=f"Unable to connect to external API: {endpoint}"

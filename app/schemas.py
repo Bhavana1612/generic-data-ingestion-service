@@ -1,6 +1,12 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict
 
 
-class EndpointRequest(BaseModel):
-    endpoints: List[str]
+class APIConfig(BaseModel):
+    url: str
+    method: str = "GET"
+    headers: Dict[str, str] = {}
+
+
+class IngestionRequest(BaseModel):
+    sources: List[APIConfig]
