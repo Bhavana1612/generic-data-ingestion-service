@@ -1,6 +1,7 @@
 import requests
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+
 from app.models import IngestedData
 
 
@@ -20,10 +21,28 @@ def ingest_external_data(endpoints, db: Session):
 
             api_data = response.json()
 
-        except Exception as e:
+        except requests.exceptions.Timeout:
+            raise HTTPException(
+                status_code=408,
+                detail=f"Request timeout for {endpoint}"
+            )
+
+        except requests.exceptions.HTTPError:
             raise HTTPException(
                 status_code=400,
-                detail=f"Failed to fetch {endpoint}: {str(e)}"
+                detail=f"API returned an error for {endpoint}"
+            )
+
+        except requests.exceptions.RequestException:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unable to connect to external API: {endpoint}"
+            )
+
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid JSON response from {endpoint}"
             )
 
 
