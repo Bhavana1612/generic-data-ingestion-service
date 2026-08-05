@@ -1,27 +1,53 @@
 # Generic Data Ingestion Service
 
-## Overview
+A generic and extensible **FastAPI-based Data Ingestion Service** that fetches data from external REST APIs and stores the ingested data in PostgreSQL.
 
-Generic Data Ingestion Service is a FastAPI-based backend application designed to ingest data from external API sources and store the collected information in PostgreSQL.
+This project was developed as part of the **Intentwise AI-Native Software Engineer Take-Home Assignment**.
 
-The goal of this project is to build a **generic and extensible ingestion pipeline** where new API sources can be added with minimal changes instead of creating separate integrations for every source.
+The main objective of this project is to design a reusable ingestion pipeline that can work with different API sources without creating separate implementations for every data source.
 
-The service accepts API endpoints as input, fetches data dynamically, processes the response, and persists the collected data into a database.
+---
+
+# Live Demo
+
+## Swagger Documentation
+
+https://generic-data-ingestion-service-2m78.onrender.com/docs
+
+## Health Endpoint
+
+https://generic-data-ingestion-service-2m78.onrender.com/health
 
 ---
 
 # Problem Statement
 
-Modern applications often collect data from multiple external sources such as:
+Modern applications frequently need to collect data from multiple external sources such as:
 
-* E-commerce APIs
-* Advertisement platforms
-* Public APIs
-* Business data providers
+* E-commerce platforms
+* Advertisement APIs
+* Public datasets
+* Business applications
 
-Building individual integrations for every source increases development and maintenance effort.
+Each external API can have different:
 
-This project provides a reusable ingestion framework:
+* Endpoints
+* Response formats
+* Data structures
+* Authentication methods
+* Pagination approaches
+
+Building separate integrations for every API increases development effort and maintenance complexity.
+
+The goal of this project is to create a common ingestion framework that can fetch data from different API sources and store it reliably.
+
+---
+
+# Solution Overview
+
+The service accepts one or more external API endpoints as input.
+
+The ingestion workflow:
 
 ```
 External API Sources
@@ -30,8 +56,19 @@ External API Sources
 FastAPI Ingestion Service
           |
           v
+Data Processing Layer
+          |
+          v
 PostgreSQL Database
 ```
+
+The application:
+
+1. Receives API endpoint details.
+2. Fetches data from external APIs.
+3. Processes the received JSON response.
+4. Stores the data in PostgreSQL.
+5. Returns ingestion status and stored information.
 
 ---
 
@@ -39,17 +76,19 @@ PostgreSQL Database
 
 ## Core Features
 
-* Accept one or multiple external API endpoints
-* Dynamically fetch JSON data from APIs
-* Store API responses in PostgreSQL
-* Generic ingestion workflow
-* FastAPI REST API implementation
-* Swagger/OpenAPI documentation
+* Generic API ingestion workflow
+* Support for multiple REST API sources
+* Dynamic endpoint handling
+* JSON response processing
+* PostgreSQL data persistence
+* FastAPI REST APIs
+* Interactive Swagger documentation
 * SQLAlchemy ORM integration
+* Pydantic request validation
 * Service layer architecture
-* Database persistence
 * External API error handling
 * Request timeout handling
+* Database session management
 
 ---
 
@@ -57,10 +96,11 @@ PostgreSQL Database
 
 ## Backend
 
-* Python
+* Python 3.11
 * FastAPI
 * SQLAlchemy
 * Pydantic
+* HTTPX
 
 ## Database
 
@@ -73,6 +113,7 @@ PostgreSQL Database
 * Swagger UI
 * Git
 * GitHub
+* Render
 
 ---
 
@@ -81,32 +122,40 @@ PostgreSQL Database
 The application follows a layered backend architecture.
 
 ```
-                Client
-                   |
-                   v
+                         Client
+                            |
+                            v
 
-            FastAPI Routes
-                   |
-                   v
+                    FastAPI Routes
 
-        Ingestion Service Layer
-                   |
-        ------------------------
-        |                      |
-        v                      v
+                            |
+                            v
 
- External API Calls       Data Processing
-                   |
-                   v
+                 Ingestion Service Layer
 
-          PostgreSQL Storage
+                            |
+             --------------------------------
+             |                              |
+             v                              v
+
+       External API Client            Error Handling
+
+             |
+             v
+
+        Data Processing Layer
+
+             |
+             v
+
+        PostgreSQL Database
 ```
 
 ---
 
-# Architecture Components
+# Application Components
 
-## Routes Layer
+## API Layer
 
 Location:
 
@@ -116,8 +165,9 @@ app/routes/ingest.py
 
 Responsibilities:
 
-* Receive ingestion requests
-* Validate incoming data
+* Accept ingestion requests
+* Validate request data
+* Trigger ingestion workflow
 * Return API responses
 
 ---
@@ -133,9 +183,11 @@ app/services/ingestion_service.py
 Responsibilities:
 
 * Execute ingestion workflow
-* Call external APIs
+* Communicate with external APIs
 * Process API responses
 * Store data into database
+
+Keeping business logic separate from routes improves maintainability and scalability.
 
 ---
 
@@ -149,8 +201,9 @@ app/database.py
 
 Responsibilities:
 
-* Database connection management
-* SQLAlchemy session handling
+* Manage PostgreSQL connection
+* Create database sessions
+* Handle database operations using SQLAlchemy ORM
 
 ---
 
@@ -173,56 +226,266 @@ generic-data-ingestion-service
 │ └── services
 │     └── ingestion_service.py
 │
-├── docker-compose.yml
 ├── requirements.txt
+├── docker-compose.yml
 └── README.md
 ```
 
 ---
 
-# How It Works
+# Application Flow
 
-1. User provides one or more API endpoints.
+## Step 1: Client Sends API Endpoint
 
-2. FastAPI receives the ingestion request.
+The client provides one or more external API URLs.
 
-3. The ingestion service calls the configured external APIs.
+Example:
 
-4. API responses are collected.
-
-5. Data is stored in PostgreSQL.
-
-6. The service returns ingestion status and saved record information.
-
-Example flow:
-
-```
-User Request
-
-      |
-      v
-
-POST /ingest/
-
-      |
-      v
-
-Fetch External API Data
-
-      |
-      v
-
-Store Response
-
-      |
-      v
-
-Return Result
+```json
+{
+  "endpoints": [
+    "https://dummyjson.com/products"
+  ]
+}
 ```
 
 ---
 
-# Setup Instructions
+## Step 2: FastAPI Receives Request
+
+The API layer validates the incoming request using Pydantic models.
+
+---
+
+## Step 3: Fetch External Data
+
+The ingestion service uses HTTP requests to communicate with external APIs.
+
+---
+
+## Step 4: Process Response
+
+The received JSON response is validated and prepared before storage.
+
+---
+
+## Step 5: Store Data
+
+The processed information is stored in PostgreSQL.
+
+---
+
+## Step 6: Return Response
+
+The API returns ingestion status and saved record information.
+
+---
+
+# Demo APIs Used
+
+## 1. DummyJSON Products API
+
+Endpoint:
+
+```
+https://dummyjson.com/products
+```
+
+Purpose:
+
+Demonstrates ingestion of product-related JSON data.
+
+---
+
+## 2. JSONPlaceholder Users API
+
+Endpoint:
+
+```
+https://jsonplaceholder.typicode.com/users
+```
+
+Purpose:
+
+Demonstrates ingestion of a different JSON response structure.
+
+---
+
+# API Documentation
+
+## Health Check
+
+```
+GET /health
+```
+
+---
+
+## Ingest Data
+
+```
+POST /ingest/
+```
+
+Example Request:
+
+```json
+{
+  "endpoints": [
+    "https://dummyjson.com/products",
+    "https://jsonplaceholder.typicode.com/users"
+  ]
+}
+```
+
+Example Response:
+
+```json
+{
+  "message": "All API data ingested successfully",
+  "saved_records": [
+    1,
+    2
+  ]
+}
+```
+
+---
+
+# Database Design
+
+The application stores external API responses in PostgreSQL.
+
+Example structure:
+
+| Field      | Description               |
+| ---------- | ------------------------- |
+| id         | Primary key               |
+| source     | API source name           |
+| data       | JSON response payload     |
+| created_at | Record creation timestamp |
+
+---
+
+# Why JSON Storage?
+
+External APIs can return different data structures.
+
+Instead of creating separate database tables for every API, JSON storage provides:
+
+* Flexible schema handling
+* Support for multiple API formats
+* Reduced database migrations
+* Easier future integration with new sources
+
+---
+
+# Error Handling
+
+The application handles common external API failures.
+
+## Timeout Handling
+
+Handles cases where an API does not respond within the expected time.
+
+Example:
+
+```
+External API request timeout
+```
+
+---
+
+## Connection Errors
+
+Handles unavailable external services.
+
+Example:
+
+```
+Unable to connect to external API
+```
+
+---
+
+## Invalid Responses
+
+Handles invalid or unexpected API responses.
+
+Example:
+
+```
+Invalid JSON response
+```
+
+---
+
+# Design Decisions
+
+## Generic Processing Workflow
+
+The application avoids source-specific business logic.
+
+The ingestion workflow remains independent from individual API sources.
+
+---
+
+## Layered Architecture
+
+The application separates:
+
+* API routes
+* Business logic
+* Database operations
+
+Benefits:
+
+* Cleaner code structure
+* Easier debugging
+* Better maintainability
+* Future scalability
+
+---
+
+## Flexible Storage Strategy
+
+JSON-based storage was selected because external APIs can have different schemas.
+
+This allows adding new API sources without frequent database redesign.
+
+---
+
+# Trade-offs
+
+Due to the assignment timeline, the following decisions were made:
+
+* Authentication support is not implemented.
+* Advanced pagination handling is not implemented.
+* Background processing is not implemented.
+* APIs are assumed to return JSON responses.
+* Ingestion runs synchronously.
+
+These decisions keep the implementation focused while maintaining a scalable foundation.
+
+---
+
+# Future Improvements
+
+Possible improvements:
+
+* API authentication strategies
+* Pagination support
+* Retry mechanism with exponential backoff
+* Rate limiting
+* Background jobs using Celery
+* Scheduled ingestion jobs
+* AWS S3/object storage support
+* Cloud scalability improvements
+* Automated integration testing
+
+---
+
+# Running Locally
 
 ## Clone Repository
 
@@ -246,10 +509,10 @@ python -m venv venv
 
 Activate:
 
-Windows PowerShell:
+Windows:
 
 ```bash
-.\venv\Scripts\Activate.ps1
+venv\Scripts\activate
 ```
 
 ---
@@ -262,17 +525,7 @@ pip install -r requirements.txt
 
 ---
 
-## Start PostgreSQL Database
-
-Using Docker:
-
-```bash
-docker compose up -d
-```
-
----
-
-## Run Application
+## Start Application
 
 ```bash
 uvicorn app.main:app --reload
@@ -284,7 +537,7 @@ Application:
 http://127.0.0.1:8000
 ```
 
-Swagger Documentation:
+Swagger:
 
 ```
 http://127.0.0.1:8000/docs
@@ -292,209 +545,38 @@ http://127.0.0.1:8000/docs
 
 ---
 
-# API Documentation
-
-## Ingest External Data
-
-Endpoint:
-
-```
-POST /ingest/
-```
-
-Request:
-
-```json
-{
-  "endpoints": [
-    "https://dummyjson.com/products",
-    "https://jsonplaceholder.typicode.com/users"
-  ]
-}
-```
-
-Response:
-
-```json
-{
-  "message": "All API data ingested successfully",
-  "saved_records": [
-    1,
-    2
-  ]
-}
-```
-
----
-
-# Demo APIs Used
-
-## API 1: DummyJSON Products API
-
-Endpoint:
-
-```
-https://dummyjson.com/products
-```
-
-Purpose:
-
-* Demonstrates product data ingestion
-* Validates handling of product-based JSON responses
-
----
-
-## API 2: JSONPlaceholder Users API
-
-Endpoint:
-
-```
-https://jsonplaceholder.typicode.com/users
-```
-
-Purpose:
-
-* Demonstrates ingestion of user-based JSON responses
-* Shows support for different JSON structures
-
----
-
-# Database Design
-
-External API responses are stored in PostgreSQL.
-
-Table fields:
-
-| Field      | Description               |
-| ---------- | ------------------------- |
-| id         | Primary key               |
-| name       | API source name           |
-| data       | JSON response data        |
-| created_at | Record creation timestamp |
-
-JSON storage was selected because different APIs can return different structures. This avoids frequent database schema changes when adding new sources.
-
----
-
-# Error Handling
-
-The application handles:
-
-## Timeout Errors
-
-Example:
-
-```
-External API request timeout
-```
-
-## Connection Errors
-
-Example:
-
-```
-Unable to connect to external API
-```
-
-## Invalid JSON Responses
-
-Example:
-
-```
-Invalid API response format
-```
-
-These checks prevent external API failures from crashing the application.
-
----
-
-# Design Decisions
-
-## Generic API Processing
-
-The application does not contain source-specific business logic.
-
-Any JSON-based API endpoint can be provided as input.
-
----
-
-## Service Layer Pattern
-
-Business logic is separated from API routes.
-
-Benefits:
-
-* Cleaner code structure
-* Easier maintenance
-* Better scalability
-
----
-
-## Flexible Data Storage
-
-API responses are stored as JSON.
-
-Advantages:
-
-* Supports different API formats
-* Avoids frequent schema changes
-* Allows future migration to other storage systems such as object storage
-
----
-
-# Trade-offs and Assumptions
-
-Current assumptions:
-
-* APIs return JSON responses
-* Authentication mechanisms are not implemented in the current version
-* Advanced pagination support is limited
-
-These decisions were made to focus on building a flexible ingestion framework within the assignment timeline.
-
----
-
-# Future Improvements
-
-Possible improvements:
-
-* API authentication support
-* Advanced pagination strategies
-* Retry mechanism with exponential backoff
-* Background processing using Celery
-* AWS S3/object storage support
-* Data validation improvements
-* Unit and integration testing
-* Cloud deployment
-
----
-
 # Testing
 
 The application was tested with:
 
-* Multiple API endpoint ingestion
-* Successful data retrieval
-* PostgreSQL persistence
-* Invalid API URL scenarios
+* Multiple external API endpoints
+* Successful ingestion scenarios
+* Database persistence validation
+* Invalid API URL handling
 * External API failure scenarios
 
 ---
 
-# AI Tools Usage
+# AI Usage
 
 AI tools were used during development for:
 
-* Debugging implementation issues
-* Reviewing architecture decisions
+* Understanding backend architecture
+* Debugging FastAPI and SQLAlchemy issues
+* Reviewing implementation decisions
 * Improving documentation
-* Understanding backend concepts
 
-One example:
+Example:
 
-During development, AI suggested a possible cause for an API failure. The suggestion was verified by checking FastAPI logs, testing through Swagger UI, and validating PostgreSQL records before applying the correct fix.
+During development, an AI suggestion was reviewed and modified after testing because the initial approach did not provide the required scalability.
 
-All AI-generated suggestions were reviewed, tested, and modified before integration.
+The final implementation decisions were verified through:
+
+* Local testing
+* API testing using Swagger
+* Database validation
+
+All AI-generated suggestions were reviewed before integration.
 
 ---
 
@@ -508,4 +590,7 @@ https://github.com/Bhavana1612/generic-data-ingestion-service
 
 # Author
 
-Bhavana Kanasani
+**Bhavana Kanasani**
+
+AI-Native Software Engineer Assignment
+Intentwise
