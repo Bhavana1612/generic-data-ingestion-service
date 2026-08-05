@@ -41,7 +41,17 @@ Creating separate integrations for every API increases development effort and ma
 This project provides a generic ingestion pipeline that can connect with different APIs and store the received data reliably.
 
 ---
+## Supported API Sources
 
+The service has been tested with multiple REST APIs:
+
+1. DummyJSON Products API
+   - JSON response ingestion
+   - Simple JSON connector
+
+2. JSONPlaceholder Users API
+   - Different JSON response structure
+   - Validates generic processing
 # Solution Overview
 
 The service accepts an API URL and connector type from the client.
