@@ -1,10 +1,10 @@
 # Generic Data Ingestion Service
 
-A generic and extensible **FastAPI-based Data Ingestion Service** that fetches data from external REST APIs and stores the ingested data in PostgreSQL.
+A generic and extensible **FastAPI-based Data Ingestion Service** that fetches data from external REST APIs, processes the responses, and stores the ingested data in PostgreSQL.
 
 This project was developed as part of the **Intentwise AI-Native Software Engineer Take-Home Assignment**.
 
-The main objective of this project is to design a reusable ingestion pipeline that can work with different API sources without creating separate implementations for every data source.
+The main goal of this project is to build a reusable ingestion framework where adding a new API source does not require rewriting the application.
 
 ---
 
@@ -29,46 +29,71 @@ Modern applications frequently need to collect data from multiple external sourc
 * Public datasets
 * Business applications
 
-Each external API can have different:
+Each external API may have different:
 
 * Endpoints
-* Response formats
-* Data structures
-* Authentication methods
+* Response structures
+* Authentication mechanisms
 * Pagination approaches
 
-Building separate integrations for every API increases development effort and maintenance complexity.
+Creating separate integrations for every API increases development effort and maintenance complexity.
 
-The goal of this project is to create a common ingestion framework that can fetch data from different API sources and store it reliably.
+The objective of this project is to design a common ingestion framework that can communicate with different API sources and store the collected data reliably.
 
 ---
 
 # Solution Overview
 
-The service accepts one or more external API endpoints as input.
+The service accepts external API configurations as input and dynamically ingests data.
 
-The ingestion workflow:
+The application follows a connector-based architecture to keep API-specific logic separated from the core ingestion workflow.
+
+## High-Level Architecture
 
 ```
-External API Sources
-          |
-          v
-FastAPI Ingestion Service
-          |
-          v
-Data Processing Layer
-          |
-          v
-PostgreSQL Database
+                         Client
+                            |
+                            |
+                            v
+
+                    FastAPI API Layer
+
+                            |
+                            |
+                            v
+
+                 Ingestion Service Layer
+
+                            |
+                            |
+                            v
+
+                    Connector Factory
+
+                 -------------------------
+                 |                       |
+                 v                       v
+
+          JSON Connector          Future Connectors
+
+                 |
+                 |
+                 v
+
+              PostgreSQL Database
 ```
 
-The application:
+## Workflow
 
-1. Receives API endpoint details.
-2. Fetches data from external APIs.
-3. Processes the received JSON response.
-4. Stores the data in PostgreSQL.
-5. Returns ingestion status and stored information.
+1. Client provides API endpoint configuration.
+2. FastAPI validates incoming request.
+3. Connector Factory selects the required connector.
+4. Connector fetches data from external API.
+5. Response data is normalized.
+6. Data is persisted into PostgreSQL.
+7. Ingestion result is returned.
+
+The ingestion service remains independent of individual API implementations.
 
 ---
 
@@ -76,14 +101,15 @@ The application:
 
 ## Core Features
 
-* Generic API ingestion workflow
-* Support for multiple REST API sources
+* Generic REST API ingestion
+* Multiple external API support
+* Connector-based architecture
 * Dynamic endpoint handling
 * JSON response processing
-* PostgreSQL data persistence
-* FastAPI REST APIs
-* Interactive Swagger documentation
+* PostgreSQL persistence
 * SQLAlchemy ORM integration
+* FastAPI REST APIs
+* Swagger OpenAPI documentation
 * Pydantic request validation
 * Service layer architecture
 * External API error handling
@@ -117,43 +143,7 @@ The application:
 
 ---
 
-# Architecture
-
-The application follows a layered backend architecture.
-
-```
-                         Client
-                            |
-                            v
-
-                    FastAPI Routes
-
-                            |
-                            v
-
-                 Ingestion Service Layer
-
-                            |
-             --------------------------------
-             |                              |
-             v                              v
-
-       External API Client            Error Handling
-
-             |
-             v
-
-        Data Processing Layer
-
-             |
-             v
-
-        PostgreSQL Database
-```
-
----
-
-# Application Components
+# Architecture Components
 
 ## API Layer
 
@@ -166,7 +156,7 @@ app/routes/ingest.py
 Responsibilities:
 
 * Accept ingestion requests
-* Validate request data
+* Validate input data
 * Trigger ingestion workflow
 * Return API responses
 
@@ -183,27 +173,60 @@ app/services/ingestion_service.py
 Responsibilities:
 
 * Execute ingestion workflow
-* Communicate with external APIs
+* Communicate with connectors
 * Process API responses
 * Store data into database
 
-Keeping business logic separate from routes improves maintainability and scalability.
+The service layer keeps business logic separated from API routes.
 
 ---
 
-## Database Layer
+## Connector Layer
 
 Location:
 
 ```
-app/database.py
+app/connectors/
+```
+
+The connector layer provides extensibility for different API formats.
+
+Base interface:
+
+```
+BaseConnector
+
+    |
+    |
+    +-- fetch()
+
+    +-- normalize()
+```
+
+Current implementation:
+
+## JSON Connector
+
+Location:
+
+```
+app/connectors/json_connector.py
 ```
 
 Responsibilities:
 
-* Manage PostgreSQL connection
-* Create database sessions
-* Handle database operations using SQLAlchemy ORM
+* Fetch JSON responses from REST APIs
+* Handle HTTP communication
+* Normalize API responses
+
+Future connectors can be added without modifying the ingestion service:
+
+Examples:
+
+* Authentication based APIs
+* Pagination APIs
+* CSV sources
+* Cloud storage connectors
 
 ---
 
@@ -223,10 +246,25 @@ generic-data-ingestion-service
 │ ├── routes
 │ │   └── ingest.py
 │
-│ └── services
-│     └── ingestion_service.py
+│ ├── services
+│ │   └── ingestion_service.py
+│
+│ ├── connectors
+│ │   ├── base.py
+│ │   ├── factory.py
+│ │   └── json_connector.py
+│
+│ ├── storage
+│ │   └── postgres.py
+│
+│ └── strategies
+│     ├── auth.py
+│     └── pagination.py
+│
+├── tests
 │
 ├── requirements.txt
+├── Dockerfile
 ├── docker-compose.yml
 └── README.md
 ```
@@ -235,49 +273,60 @@ generic-data-ingestion-service
 
 # Application Flow
 
-## Step 1: Client Sends API Endpoint
+## Step 1: Client Sends API Configuration
 
-The client provides one or more external API URLs.
-
-Example:
+Example request:
 
 ```json
 {
   "endpoints": [
-    "https://dummyjson.com/products"
+    {
+      "url": "https://dummyjson.com/products",
+      "connector_type": "json"
+    }
   ]
 }
 ```
 
 ---
 
-## Step 2: FastAPI Receives Request
+## Step 2: Request Validation
 
-The API layer validates the incoming request using Pydantic models.
-
----
-
-## Step 3: Fetch External Data
-
-The ingestion service uses HTTP requests to communicate with external APIs.
+FastAPI validates the request using Pydantic models.
 
 ---
 
-## Step 4: Process Response
+## Step 3: Connector Selection
 
-The received JSON response is validated and prepared before storage.
+Connector Factory selects the required connector based on:
+
+```
+connector_type
+```
+
+Example:
+
+```
+json  ---> JSONConnector
+```
 
 ---
 
-## Step 5: Store Data
+## Step 4: Data Fetching
 
-The processed information is stored in PostgreSQL.
+The connector communicates with the external API and retrieves data.
 
 ---
 
-## Step 6: Return Response
+## Step 5: Data Processing
 
-The API returns ingestion status and saved record information.
+The response is normalized into a consistent format.
+
+---
+
+## Step 6: Database Storage
+
+Processed data is stored in PostgreSQL.
 
 ---
 
@@ -293,7 +342,7 @@ https://dummyjson.com/products
 
 Purpose:
 
-Demonstrates ingestion of product-related JSON data.
+Demonstrates ingestion of product JSON data.
 
 ---
 
@@ -307,7 +356,7 @@ https://jsonplaceholder.typicode.com/users
 
 Purpose:
 
-Demonstrates ingestion of a different JSON response structure.
+Demonstrates ingestion from a different JSON response structure.
 
 ---
 
@@ -332,8 +381,10 @@ Example Request:
 ```json
 {
   "endpoints": [
-    "https://dummyjson.com/products",
-    "https://jsonplaceholder.typicode.com/users"
+    {
+      "url": "https://dummyjson.com/products",
+      "connector_type": "json"
+    }
   ]
 }
 ```
@@ -344,11 +395,17 @@ Example Response:
 {
   "message": "All API data ingested successfully",
   "saved_records": [
-    1,
-    2
+    12
   ]
 }
 ```
+
+This confirms:
+
+* External API communication successful
+* Connector execution successful
+* Response processing completed
+* PostgreSQL persistence successful
 
 ---
 
@@ -356,27 +413,27 @@ Example Response:
 
 The application stores external API responses in PostgreSQL.
 
-Example structure:
+## Table Structure
 
 | Field      | Description               |
 | ---------- | ------------------------- |
 | id         | Primary key               |
-| source     | API source name           |
+| name       | API source identifier     |
 | data       | JSON response payload     |
 | created_at | Record creation timestamp |
 
 ---
 
-# Why JSON Storage?
+# Storage Strategy
 
 External APIs can return different data structures.
 
-Instead of creating separate database tables for every API, JSON storage provides:
+Instead of creating separate tables for every API, JSON storage provides:
 
 * Flexible schema handling
 * Support for multiple API formats
 * Reduced database migrations
-* Easier future integration with new sources
+* Easier future integration
 
 ---
 
@@ -386,19 +443,13 @@ The application handles common external API failures.
 
 ## Timeout Handling
 
-Handles cases where an API does not respond within the expected time.
-
 Example:
 
 ```
 External API request timeout
 ```
 
----
-
 ## Connection Errors
-
-Handles unavailable external services.
 
 Example:
 
@@ -406,17 +457,15 @@ Example:
 Unable to connect to external API
 ```
 
----
-
 ## Invalid Responses
-
-Handles invalid or unexpected API responses.
 
 Example:
 
 ```
 Invalid JSON response
 ```
+
+These failures are handled without crashing the application.
 
 ---
 
@@ -426,7 +475,7 @@ Invalid JSON response
 
 The application avoids source-specific business logic.
 
-The ingestion workflow remains independent from individual API sources.
+Adding a new API source requires creating a new connector instead of modifying existing ingestion logic.
 
 ---
 
@@ -436,6 +485,7 @@ The application separates:
 
 * API routes
 * Business logic
+* Connector logic
 * Database operations
 
 Benefits:
@@ -447,25 +497,27 @@ Benefits:
 
 ---
 
-## Flexible Storage Strategy
-
-JSON-based storage was selected because external APIs can have different schemas.
-
-This allows adding new API sources without frequent database redesign.
-
----
-
 # Trade-offs
 
-Due to the assignment timeline, the following decisions were made:
+Due to the assignment timeline, some advanced features were intentionally limited.
 
-* Authentication support is not implemented.
-* Advanced pagination handling is not implemented.
-* Background processing is not implemented.
-* APIs are assumed to return JSON responses.
-* Ingestion runs synchronously.
+Implemented:
 
-These decisions keep the implementation focused while maintaining a scalable foundation.
+* Generic ingestion workflow
+* Connector architecture
+* Database persistence
+* API validation
+* Error handling
+
+Not implemented:
+
+* Automatic authentication detection
+* Advanced pagination strategies
+* Background workers
+* Retry queues
+* Rate limiting
+
+These features can be added without changing the core architecture.
 
 ---
 
@@ -473,15 +525,15 @@ These decisions keep the implementation focused while maintaining a scalable fou
 
 Possible improvements:
 
-* API authentication strategies
-* Pagination support
+* OAuth/API key authentication support
+* Pagination connectors
 * Retry mechanism with exponential backoff
 * Rate limiting
-* Background jobs using Celery
+* Background processing using Celery
 * Scheduled ingestion jobs
 * AWS S3/object storage support
-* Cloud scalability improvements
-* Automated integration testing
+* Database migrations using Alembic
+* More automated testing
 
 ---
 
@@ -525,7 +577,17 @@ pip install -r requirements.txt
 
 ---
 
-## Start Application
+## Start PostgreSQL
+
+Using Docker:
+
+```bash
+docker compose up -d
+```
+
+---
+
+## Run Application
 
 ```bash
 uvicorn app.main:app --reload
@@ -549,9 +611,9 @@ http://127.0.0.1:8000/docs
 
 The application was tested with:
 
-* Multiple external API endpoints
+* External API ingestion
+* Database persistence
 * Successful ingestion scenarios
-* Database persistence validation
 * Invalid API URL handling
 * External API failure scenarios
 
@@ -563,20 +625,20 @@ AI tools were used during development for:
 
 * Understanding backend architecture
 * Debugging FastAPI and SQLAlchemy issues
-* Reviewing implementation decisions
+* Reviewing design decisions
 * Improving documentation
 
 Example:
 
-During development, an AI suggestion was reviewed and modified after testing because the initial approach did not provide the required scalability.
+An initial approach considered storing complete API responses as a single JSON document.
 
-The final implementation decisions were verified through:
+After reviewing scalability concerns, the design was improved by separating connector logic and ingestion workflow.
 
-* Local testing
-* API testing using Swagger
+All AI suggestions were manually verified using:
+
+* Swagger testing
 * Database validation
-
-All AI-generated suggestions were reviewed before integration.
+* Local execution
 
 ---
 
