@@ -1,14 +1,18 @@
 # Generic Data Ingestion Service
 
-A generic and extensible **FastAPI-based Data Ingestion Service** that ingests data from external REST APIs and stores the collected data in PostgreSQL.
+A generic and extensible **FastAPI-based Data Ingestion Service** that ingests data from external REST APIs and stores the collected data reliably.
 
 This project was developed as part of the **Intentwise AI-Native Software Engineer Take-Home Assignment**.
 
-The goal of this project is to build a reusable ingestion framework where adding a new API source does not require rewriting the application logic.
+The main goal is to build a reusable ingestion framework where adding a new API source does not require rewriting the application logic.
 
 ---
 
 # Live Demo
+
+## Hosted API
+
+https://generic-data-ingestion-service-2m78.onrender.com
 
 ## Swagger API Documentation
 
@@ -29,32 +33,22 @@ Modern applications need to collect data from multiple external sources such as:
 - Business applications
 - Public datasets
 
-Each external API may have different:
+Different APIs may have different:
 
-- Endpoints
 - Response formats
 - Authentication mechanisms
 - Pagination approaches
+- Data structures
 
-Creating separate integrations for every API increases development effort and maintenance complexity.
+Building separate integrations for every API increases development and maintenance effort.
 
-This project provides a generic ingestion pipeline that can connect with different APIs and store the received data reliably.
+This project provides a generic ingestion pipeline that can connect with external APIs, process responses, and persist data without source-specific application changes.
 
 ---
-## Supported API Sources
 
-The service has been tested with multiple REST APIs:
-
-1. DummyJSON Products API
-   - JSON response ingestion
-   - Simple JSON connector
-
-2. JSONPlaceholder Users API
-   - Different JSON response structure
-   - Validates generic processing
 # Solution Overview
 
-The service accepts an API URL and connector type from the client.
+The service accepts an external API endpoint and connector type.
 
 The ingestion workflow:
 
@@ -77,7 +71,7 @@ v
 PostgreSQL Database
 
 
-The design keeps source-specific logic separated from the core ingestion workflow.
+The design separates source-specific logic from the main ingestion workflow.
 
 ---
 
@@ -86,20 +80,19 @@ The design keeps source-specific logic separated from the core ingestion workflo
 ## Core Features
 
 - Generic REST API ingestion
-- Multiple API source support
+- External API data fetching
 - Connector-based architecture
 - JSON API processing
 - PostgreSQL persistence
 - SQLAlchemy ORM integration
-- FastAPI REST APIs
+- FastAPI REST endpoints
 - Swagger OpenAPI documentation
-- Pydantic request validation
-- Service layer architecture
+- Request validation using Pydantic
 - Job tracking
 - Record retrieval
-- API timeout handling
-- External API error handling
-- Docker database setup
+- API error handling
+- Timeout handling
+- Docker database support
 
 ---
 
@@ -133,25 +126,32 @@ The design keeps source-specific logic separated from the core ingestion workflo
 The application follows a layered architecture:
 
              Client
+
                |
+
                v
 
-          FastAPI Routes
+         FastAPI Routes
 
                |
+
                v
 
       Ingestion Service Layer
 
                |
-      ---------------------
-      |                   |
-      v                   v
+
+    -------------------------
+
+    |                       |
+
+    v                       v
 
 Connector Strategy PostgreSQL Storage
 
-      |
-      v
+    |
+
+    v
 
 External API Source
 
@@ -170,12 +170,6 @@ generic-data-ingestion-service
 │ ├── database.py
 │ ├── models.py
 │ ├── schemas.py
-│ │
-│ ├── client
-│ │ └── http_client.py
-│ │
-│ ├── config
-│ │ └── loader.py
 │ │
 │ ├── connectors
 │ │ ├── base.py
@@ -214,7 +208,7 @@ generic-data-ingestion-service
 4. External API data is fetched.
 5. Response data is processed.
 6. Data is stored in PostgreSQL.
-7. Job details and records can be retrieved.
+7. Job details and stored records can be retrieved.
 
 Flow:
 
@@ -222,26 +216,31 @@ Flow:
 POST Request
 
   |
+
   v
 
 Validate Input
 
   |
+
   v
 
 Select Connector
 
   |
+
   v
 
 Fetch External Data
 
   |
+
   v
 
 Store Records
 
   |
+
   v
 
 Return Job Information
@@ -253,7 +252,7 @@ Return Job Information
 
 ## Simple JSON Connector
 
-Used for APIs returning normal JSON responses.
+Used for APIs returning standard JSON responses.
 
 Example:
 
@@ -263,7 +262,7 @@ simple_json
 
 ## Offset Pagination Connector
 
-Used for APIs supporting offset pagination.
+Used for APIs supporting offset and limit pagination.
 
 Example:
 
@@ -271,26 +270,30 @@ Example:
 offset_pagination
 
 
+The connector design allows new authentication or pagination strategies to be added without modifying the ingestion workflow.
+
 ---
 
 # API Documentation
 
 ## Health Check
 
-### Endpoint
+Endpoint:
 
 
 GET /health
 
 
-Example Response:
+Example:
 
 ```json
 {
   "status": "healthy"
 }
 Ingest Data
-Endpoint
+
+Endpoint:
+
 POST /api/ingest
 
 Request:
@@ -308,7 +311,9 @@ Response:
   "records_ingested": 1
 }
 Get Jobs
-Endpoint
+
+Endpoint:
+
 GET /api/jobs
 
 Returns all ingestion jobs.
@@ -318,40 +323,76 @@ Example:
 {
   "jobs": [
     {
-      "id": "job-id",
       "source_name": "dummyjson.com",
-      "source_url": "https://dummyjson.com/products",
       "status": "completed",
       "record_count": 1
     }
   ]
 }
 Get Job Details
-Endpoint
+
+Endpoint:
+
 GET /api/jobs/{job_id}
 
-Returns information about a specific ingestion job.
+Returns information about a specific ingestion execution.
 
 Get Stored Records
-Endpoint
+
+Endpoint:
+
 GET /api/jobs/{job_id}/records
 
-Returns the records stored for the selected ingestion job.
+Returns records stored for a specific ingestion job.
 
-Demo API Used
-DummyJSON Products API
+Public APIs Used
+
+The service is designed to support multiple external APIs through a connector-based architecture.
+
+API 1: DummyJSON Products API
 
 Endpoint:
 
 https://dummyjson.com/products
 
+Authentication:
+
+None
+
+Response:
+
+JSON
+
 Purpose:
 
-Demonstrates ingestion of external JSON product data.
+Demonstrates ingestion of a simple public REST API.
+
+Connector:
+
+simple_json
+API 2: Offset Pagination APIs
+
+The service supports APIs that provide paginated responses.
+
+Supported pagination style:
+
+offset_pagination
+
+Characteristics:
+
+Offset based fetching
+Limit based fetching
+Multiple pages can be processed
+
+The ingestion workflow remains unchanged when adding new sources.
 
 Database Design
 
-The application stores API responses in PostgreSQL.
+The application stores external API responses in PostgreSQL.
+
+Records are stored using a flexible JSON payload approach.
+
+Example structure:
 
 Field	Description
 id	Primary key
@@ -359,67 +400,70 @@ job_id	Related ingestion job
 payload	JSON response data
 created_at	Timestamp
 
-JSON storage allows different API response structures without database schema changes.
+Advantages:
 
+Supports different API schemas
+Avoids creating new tables for every API
+Easier integration of new sources
+
+Tradeoff:
+
+Complex field queries require JSON operations.
 Error Handling
 
 The application handles:
 
 Timeout Errors
-External API request timeout
+
+External API request timeout.
+
 Connection Errors
-Unable to connect to external API
+
+Unable to connect to external API.
+
 Validation Errors
-Missing required fields
+
+Missing or incorrect request fields.
 
 Failures are handled without crashing the application.
 
-Design Decisions
-Generic Processing
+Key Design Decisions
+Generic Storage
 
-The application avoids source-specific business logic.
-
-New API sources can be supported by adding connector implementations instead of changing the ingestion workflow.
-
-Service Layer Pattern
-
-Business logic is separated from API routes.
+Instead of creating API-specific database tables, raw API responses are stored as JSON.
 
 Benefits:
 
-Cleaner code
-Easier maintenance
-Better testing
-Improved scalability
-Flexible Data Storage
+Supports unknown API structures
+Avoids database migrations
+Makes adding new APIs easier
+Connector Based Architecture
 
-API responses are stored as JSON.
+Source-specific processing is isolated inside connectors.
 
-Advantages:
+The core ingestion service does not contain API-specific logic.
 
-Supports different API structures
-Avoids frequent schema changes
-Easier future migration to object storage
-Trade-offs
+Adding a new source requires:
+
+Adding connector configuration
+Adding a new strategy only if a new API pattern is introduced
+Tradeoffs and Assumptions
 
 Current assumptions:
 
 APIs return JSON responses
-Advanced authentication providers are not implemented
-Large-scale distributed processing is outside the assignment scope
-Future Improvements
+Authentication strategies are limited
+Large distributed processing is outside assignment scope
+Database storage is the primary destination
 
-Possible enhancements:
+Possible improvements:
 
-OAuth/API key authentication
-Advanced pagination strategies
+OAuth authentication
+More pagination strategies
 Retry mechanism with exponential backoff
-Rate limiting
-Background jobs using Celery
-Scheduled ingestion
-AWS S3 integration
-Monitoring and logging
-Improved integration testing
+Background workers
+S3 storage integration
+Monitoring and metrics
 Running Locally
 Clone Repository
 git clone https://github.com/Bhavana1612/generic-data-ingestion-service.git
@@ -432,7 +476,7 @@ python -m venv venv
 
 Activate:
 
-Windows PowerShell:
+Windows:
 
 .\venv\Scripts\Activate.ps1
 Install Dependencies
@@ -452,16 +496,27 @@ http://127.0.0.1:8000
 Swagger:
 
 http://127.0.0.1:8000/docs
+Verification
+
+The application was verified using:
+
+✅ Render deployed endpoint
+✅ Swagger API testing
+✅ External API ingestion
+✅ PostgreSQL persistence
+✅ Invalid request validation
+✅ Job retrieval APIs
+✅ Record retrieval APIs
+
 Testing
 
-The application was tested with:
+Tested scenarios:
 
 Successful API ingestion
-Multiple API requests
+Invalid request validation
 Database persistence
-Invalid URL handling
-Validation failures
-External API errors
+External API failures
+Multiple ingestion requests
 
 Run tests:
 
@@ -470,17 +525,23 @@ AI Tools Usage
 
 AI tools were used during development for:
 
-Debugging assistance
-Architecture discussions
-Documentation improvement
+Debugging implementation issues
+Reviewing architecture decisions
+Improving documentation
 Understanding backend best practices
 
-All suggestions were manually verified through:
+All AI-generated suggestions were manually verified through:
 
-Swagger testing
-API validation
-Database checks
-Local execution
+Swagger API testing
+Running the application locally
+Checking database persistence
+
+One issue identified during development:
+
+An initial request schema mismatch caused HTTP 422 validation errors while testing the ingestion endpoint.
+
+The issue was identified through Swagger API responses and fixed by aligning the request model with the API contract.
+
 Repository
 
 GitHub:
